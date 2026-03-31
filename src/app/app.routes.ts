@@ -7,7 +7,9 @@ export const routes: Routes = [
     path: '',
     component: MainLayoutComponent,
     children: [
-      { path: '', component: ListWordComponent }
+      { path: '', component: ListWordComponent },
+      { path: 'home', component: ListWordComponent },
+      { path: 'list-word', component: ListWordComponent },
     ]
   },
 ];

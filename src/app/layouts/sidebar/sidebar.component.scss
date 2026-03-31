@@ -1,8 +1,8 @@
 .sidebar {
   width: 220px;
   height: 100vh;
-  background: #111827;
-  color: #fff;
+  background: var(--color-bg-primary);;
+  color: var(--color-bg-secondary);
   display: flex;
   flex-direction: column;
   padding: 16px;

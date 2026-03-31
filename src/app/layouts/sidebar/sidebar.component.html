@@ -1,22 +1,16 @@
 <nav class="sidebar">
   <div class="logo">
-    <h2>MyApp</h2>
+    <h2>Easy study</h2>
   </div>
 
   <ul class="menu">
-    <li routerLink="/dashboard" routerLinkActive="active">
-      <span>🏠</span>
-      <span>Dashboard</span>
-    </li>
-
-    <li routerLink="/users" routerLinkActive="active">
-      <span>👤</span>
-      <span>Users</span>
-    </li>
-
-    <li routerLink="/products" routerLinkActive="active">
-      <span>📦</span>
-      <span>Products</span>
-    </li>
+    @for (item of menuItems; track item) {
+      <li>
+        <a [routerLink]="item.link" routerLinkActive="active">
+          <i [class]="item.icon"></i>
+          {{ item.title }}
+        </a>
+      </li>
+    }
   </ul>
 </nav>
