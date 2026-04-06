@@ -1,24 +1,227 @@
-<div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+<div class="space-y-6 animate-fade-in">
+  <!-- Header Section -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800 font-inter">Danh sách từ vựng</h1>
+      <p class="text-slate-500 text-sm">Học tập hiệu quả với dữ liệu được đồng bộ từ Google Sheet.</p>
+    </div>
 
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <button (click)="loadData()" [disabled]="sheetsService.loading()"
+        class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all">
+        <i class="fa-solid fa-rotate" [class.animate-spin]="sheetsService.loading()"></i>
+        Làm mới
+      </button>
+      <button
+        class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all active:scale-95 shadow-sm shadow-blue-200">
+        <i class="fa-solid fa-plus"></i>
+        Thêm từ mới
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden min-h-[400px]">
+    @if (sheetsService.loading() && words.length === 0) {
+    <div class="p-20 flex flex-col items-center justify-center space-y-4">
+      <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-slate-500 font-medium font-inter animate-pulse">Đang nạp dữ liệu từ Google Sheet...</p>
+    </div>
+    } @else {
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-100">
+            <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider w-16 text-center">STT (Excel)</th>
+            <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Từ vựng (Eng)</th>
+            <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Nghĩa tiếng Việt</th>
+            <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Ghi chú</th>
+            <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-24">Sửa</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50 text-slate-700">
+          @for (word of paginatedWords; track word.row) {
+          <tr class="hover:bg-slate-50/50 transition-colors group">
+            <td class="p-5 text-center text-slate-400 font-mono text-xs">#{{ word.row }}</td>
+            <td class="p-5 align-top">
+              <div class="flex items-center gap-2 group/word">
+                <span
+                  class="text-slate-800 font-bold group-hover/word:text-blue-600 transition-colors uppercase tracking-tight">{{
+                  word.wordE }}</span>
+
+                @if (word.dictionaryData?.audioUrl) {
+                <button (click)="playAudio(word.dictionaryData?.audioUrl)"
+                  class="w-7 h-7 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all active:scale-90 shadow-sm shadow-blue-100">
+                  <i class="fa-solid fa-headphones-simple text-[10px]"></i>
+                </button>
+                }
+              </div>
+
+              <div class="flex items-center gap-1.5 mt-1">
+                <span class="text-[10px] text-slate-400 font-medium">/{{ word.pronunciation ||
+                  word.dictionaryData?.phonetic || '---' }}/</span>
+                @if (word.dictionaryData?.partOfSpeech) {
+                <span
+                  class="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold rounded uppercase tracking-tighter">{{
+                  word.dictionaryData?.partOfSpeech }}</span>
+                }
+              </div>
+
+              @if (word.dictionaryData?.definition) {
+              <div
+                class="mt-2 text-[11px] text-slate-500 line-clamp-2 max-w-[240px] leading-relaxed italic border-l-2 border-slate-100 pl-2">
+                {{ word.dictionaryData?.definition }}
+              </div>
+              }
+            </td>
+            <td class="p-5 font-medium">{{ word.meaning }}</td>
+            <td class="p-5 text-sm text-slate-400 italic max-w-xs truncate">{{ word.example || '---' }}</td>
+            <td class="p-5 text-center">
+              <button (click)="openEditModal(word)"
+                class="p-2.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all active:scale-90">
+                <i class="fa-solid fa-pen-to-square text-lg"></i>
+              </button>
+            </td>
+          </tr>
+          } @empty {
+          @if (!sheetsService.loading()) {
+          <tr>
+            <td colspan="5" class="p-20 text-center text-slate-400 italic font-inter">
+              <i class="fa-solid fa-cloud-sun text-5xl mb-4 block text-slate-200"></i>
+              Sheet đang trống hoặc chưa có dữ liệu từ vựng.
+            </td>
+          </tr>
+          }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Enhanced Pagination Controls -->
+    @if (words.length > 0) {
+    <div
+      class="p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-center justify-between gap-6">
+      <!-- Left side: Size & Stats -->
+      <div class="flex flex-wrap items-center gap-6">
+        <div class="flex items-center gap-2.5">
+          <span class="text-[10px] font-bold uppercase tracking-[0.1em]">Hiển thị {{pageSize}} dòng/1
+            trang</span>
+          <select (change)="onPageSizeChange($event)" [value]="pageSize"
+            class="bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-1.5 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none cursor-pointer transition-all shadow-sm">
+            @for (size of pageSizes; track size) {
+            <option [value]="size">{{ size }} dòng</option>
+            }
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2.5 group">
+          <span class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">Đến trang</span>
+          <div class="relative">
+            <input type="number" (keydown.enter)="onJumpToPage($event)" placeholder="Số..."
+              class="w-16 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm">
+            <div
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-300 pointer-events-none group-hover:text-blue-400 transition-colors">
+              ↵
+            </div>
+          </div>
+        </div>
+
+        <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
+
+        <p class="text-xs text-slate-500 font-medium">
+          Tổng cộng <span class="text-slate-800 font-bold">{{ words.length }}</span> dòng dữ liệu
+        </p>
+      </div>
+
+      <!-- Right side: Page circles -->
+      <div class="flex items-center gap-2">
+        <button (click)="prevPage()" [disabled]="currentPage === 1"
+          class="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm active:scale-90">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i>
+        </button>
+
+        <div class="flex items-center gap-1.5">
+          @for (page of getVisiblePages(); track $index) {
+          @if (page === '...') {
+          <span class="w-8 h-8 flex items-center justify-center text-slate-300 text-xs font-medium">...</span>
+          } @else {
+          <button (click)="goToPage(page)" [class.bg-blue-600]="currentPage === page"
+            [class.text-white]="currentPage === page" [class.border-blue-600]="currentPage === page"
+            [class.shadow-lg]="currentPage === page" [class.shadow-blue-200]="currentPage === page"
+            [class.bg-white]="currentPage !== page" [class.text-slate-600]="currentPage !== page"
+            [class.border-slate-200]="currentPage !== page" [class.hover:bg-slate-50]="currentPage !== page"
+            [class.hover:border-slate-300]="currentPage !== page"
+            class="w-9 h-9 flex items-center justify-center rounded-full border text-xs font-bold transition-all transform active:scale-90">
+            {{ page }}
+          </button>
+          }
+          }
+        </div>
+
+        <button (click)="nextPage()" [disabled]="currentPage === totalPages"
+          class="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm active:scale-90">
+          <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+    }
+    }
+  </div>
+
+  <!-- Edit Modal -->
+  @if (showEditModal && currentEditingRow) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+      (click)="closeModal()"></div>
+
+    <div
+      class="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200 border border-white/20">
+      <div class="p-7 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">Danh sách từ vựng</h1>
-            <p class="text-slate-500 text-sm">Quản lý và học tập các từ vựng đã lưu của bạn.</p>
+          <h3 class="text-xl font-bold text-slate-800 font-inter">Hiệu chỉnh từ vựng</h3>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md uppercase">Vị trí</span>
+            <p class="text-xs text-slate-400 font-medium">Dòng số {{ currentEditingRow.row }}</p>
+          </div>
+        </div>
+        <button (click)="closeModal()"
+          class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all active:scale-90">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="p-8 space-y-6">
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Từ vựng (English)</label>
+          <input formControlName="word" type="text"
+            class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-slate-800 placeholder:text-slate-300">
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Nghĩa tiếng Việt</label>
+          <input formControlName="meaning" type="text"
+            class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-slate-800 placeholder:text-slate-300">
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">Ghi chú / Ví dụ</label>
+          <textarea formControlName="example" rows="4" placeholder="Ghi lại ngữ cảnh hoặc ví dụ..."
+            class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all resize-none text-slate-700 font-medium"></textarea>
         </div>
 
-        <div class="flex items-center gap-3">
-            <button
-                class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all active:scale-95 shadow-sm shadow-blue-200">
-                <i class="fa-solid fa-plus"></i>
-                Thêm từ mới
-            </button>
+        <div class="flex gap-4 pt-4 pb-2">
+          <button type="button" (click)="closeModal()"
+            class="flex-1 px-4 py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold rounded-2xl transition-all">
+            Hủy bỏ (Esc)
+          </button>
+          <button type="submit" [disabled]="editForm.invalid || sheetsService.loading()"
+            class="flex-1 px-4 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-400/30">
+            @if (sheetsService.loading()) {
+            <div class="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+            }
+            {{ sheetsService.loading() ? 'Đang lưu...' : 'Lưu cập nhật' }}
+          </button>
         </div>
+      </form>
     </div>
-
-    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div class="p-6">
-            <p class="text-slate-400 italic">Dữ liệu sẽ hiển thị ở đây...</p>
-        </div>
-    </div>
-
+  </div>
+  }
 </div>
