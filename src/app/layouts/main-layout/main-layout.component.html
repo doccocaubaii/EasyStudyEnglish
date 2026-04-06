@@ -1,10 +1,13 @@
 <!--<app-header></app-header>-->
 
-<div class="flex">
-  <app-sidebar></app-sidebar>
-
-  <main>
-    <router-outlet></router-outlet>
+<div class="flex min-h-screen">
+  <!-- Sidebar luôn cố định -->
+  <app-sidebar class="sticky top-0 h-screen shrink-0"></app-sidebar>
+  <!-- Phần main content chiếm trọn không gian còn lại -->
+  <main class="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 md:p-10 m-5 rounded-lg bg-white">
+    <div class="max-w-7xl">
+      <router-outlet></router-outlet>
+    </div>
   </main>
 </div>
 
