@@ -6,7 +6,7 @@
   <ul class="menu">
     @for (item of menuItems; track item) {
       <li>
-        <a [routerLink]="item.link" routerLinkActive="active">
+        <a [routerLink]="item.link" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.link === '/' }">
           <i [class]="item.icon"></i>
           {{ item.title }}
         </a>

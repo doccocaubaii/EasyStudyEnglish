@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import {RouterLink, RouterLinkActive} from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-sidebar',
@@ -21,6 +21,11 @@ export class SidebarComponent {
       title: 'List Word',
       icon: 'list',
       link: '/list-word'
+    },
+    {
+      title: 'Config',
+      icon: 'config',
+      link: '/config'
     }
   ]
 }
