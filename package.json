@@ -1,13 +1,18 @@
 {
   "name": "easy-study-english",
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Easy Study English - Vocabulary Management Tool",
+  "main": "electron-main.js",
+  "author": "doccocaubaii",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "dev": "ng serve --configuration development --open",
-    "build": "ng build",
+    "build": "ng build --base-href ./",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "electron-start": "electron .",
+    "electron:make": "npm run build && electron-forge make"
   },
   "private": true,
   "dependencies": {
@@ -27,7 +32,14 @@
     "@angular-devkit/build-angular": "^19.2.22",
     "@angular/cli": "^19.2.22",
     "@angular/compiler-cli": "^19.2.0",
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
     "@types/jasmine": "~5.1.0",
+    "electron": "^41.1.1",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",

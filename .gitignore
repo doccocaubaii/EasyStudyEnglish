@@ -5,6 +5,10 @@
 /tmp
 /out-tsc
 /bazel-out
+/out
+/release
+*.exe
+*.zip
 
 # Node
 /node_modules
