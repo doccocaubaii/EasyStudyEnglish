@@ -33,16 +33,20 @@ const storagePath = app.isPackaged ? path.dirname(process.execPath) : __dirname;
 
 // Network IPC Handlers (Bypass CORS triệt để)
 ipcMain.handle('http-get', async (event, url) => {
+  console.log('--- [Electron Bridge GET] calling:', url);
   const response = await net.fetch(url);
+  console.log('--- [Electron Bridge GET] status:', response.status);
   return await response.json();
 });
 
 ipcMain.handle('http-post', async (event, { url, body }) => {
+  console.log('--- [Electron Bridge POST] calling:', url);
   const response = await net.fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+  console.log('--- [Electron Bridge POST] status:', response.status);
   return await response.text();
 });
 

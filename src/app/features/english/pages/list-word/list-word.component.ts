@@ -16,6 +16,7 @@ export class ListWordComponent implements OnInit {
 
   // Modal state
   showEditModal = false;
+  isEditMode = false;
   editForm: FormGroup;
   currentEditingRow: WordModel | null = null;
   saving = false;
@@ -99,6 +100,9 @@ export class ListWordComponent implements OnInit {
     this.editForm = this.fb.group({
       word: ['', Validators.required],
       meaning: ['', Validators.required],
+      pronunciation: [''],
+      definition: [''],
+      audioUrl: [''],
       example: ['']
     });
   }
@@ -128,16 +132,49 @@ export class ListWordComponent implements OnInit {
   async enrichCurrentPage() {
     const currentPageWords = this.paginatedWords;
     for (const word of currentPageWords) {
-      if (!word.dictionaryData) {
+      // Chỉ gọi API nếu các thông tin quan trọng bị thiếu
+      if (!word.pronunciation || !word.definition || !word.audioUrl) {
         const data = await this.dictionaryService.getDefinition(word.wordE);
         if (data) {
           const firstMeaning = data.meanings[0];
-          word.dictionaryData = {
-            definition: firstMeaning?.definitions[0]?.definition,
-            partOfSpeech: firstMeaning?.partOfSpeech,
-            audioUrl: data.phonetics.find(p => p.audio)?.audio,
-            phonetic: data.phonetic
-          };
+          
+          // 1. Cập nhật Model (để hiển thị UI)
+          const newPronunciation = word.pronunciation || data.phonetic || '';
+          const newDefinition = word.definition || firstMeaning?.definitions[0]?.definition || '';
+          const newAudioUrl = word.audioUrl || data.phonetics.find(p => p.audio)?.audio || '';
+
+          // 2. Chỉ thực hiện UPDATE nếu có thông tin mới thực sự
+          if (newPronunciation !== word.pronunciation || 
+              newDefinition !== word.definition || 
+              newAudioUrl !== word.audioUrl) {
+            
+            word.pronunciation = newPronunciation;
+            word.definition = newDefinition;
+            word.audioUrl = newAudioUrl;
+
+            // 3. Tự động đẩy lên Sheet (Thứ tự 14 cột chuẩn)
+            const dataToSave = [
+              word.id,
+              word.learnTime || new Date().toLocaleString(),
+              word.wordE,
+              word.pronunciation,
+              word.meaning,
+              word.definition,
+              word.learnCount,
+              word.audioUrl,
+              word.example,
+              word.isDeleted ? 'TRUE' : 'FALSE',
+              word.easinessFactor,
+              word.intervalDays,
+              word.repetitionStreak,
+              word.nextReviewDate
+            ];
+            
+            // Gọi âm thầm, không cần await để tránh đứng UI
+            this.sheetsService.updateWord(word.row, dataToSave).catch(err => {
+              console.error(`Tự động đồng bộ từ "${word.wordE}" thất bại:`, err);
+            });
+          }
         }
       }
     }
@@ -149,11 +186,28 @@ export class ListWordComponent implements OnInit {
     audio.play().catch(err => console.error('Audio play failed:', err));
   }
 
+  openAddModal() {
+    this.isEditMode = false;
+    this.editForm.reset({
+      word: '',
+      meaning: '',
+      pronunciation: '',
+      definition: '',
+      audioUrl: '',
+      example: ''
+    });
+    this.showEditModal = true;
+  }
+
   openEditModal(word: WordModel) {
+    this.isEditMode = true;
     this.currentEditingRow = word;
     this.editForm.patchValue({
       word: word.wordE,
       meaning: word.meaning,
+      pronunciation: word.pronunciation,
+      definition: word.definition,
+      audioUrl: word.audioUrl,
       example: word.example
     });
     this.showEditModal = true;
@@ -165,33 +219,51 @@ export class ListWordComponent implements OnInit {
     this.currentEditingRow = null;
   }
 
-  async submitEdit() {
-    if (this.editForm.invalid || !this.currentEditingRow) return;
+  async submitForm() {
+    if (this.editForm.invalid) return;
 
     this.saving = true;
     try {
-      const { word, meaning, example } = this.editForm.value;
+      const formData = this.editForm.value;
+      const wordData: Partial<WordModel> = {
+        wordE: formData.word,
+        meaning: formData.meaning,
+        pronunciation: formData.pronunciation,
+        definition: formData.definition,
+        audioUrl: formData.audioUrl,
+        example: formData.example
+      };
 
-      // Mapping ngược lại khi lưu (Dùng lại Raw để giữ nguyên các cột không sửa)
-      // Cột C (Index 2): Từ mới, Cột E (Index 4): Nghĩa, Cột I (Index 8): Ghi chú
-      const dataToSave = [
-        this.currentEditingRow.raw[' '] || '',
-        this.currentEditingRow.raw['Thời gian học'] || '',
-        word,
-        this.currentEditingRow.raw['Phiên âm'] || '',
-        meaning,
-        this.currentEditingRow.raw['Note'] || '',
-        this.currentEditingRow.raw['Số lần học'] || '',
-        this.currentEditingRow.raw[''] || '',
-        example
-      ];
+      if (this.isEditMode && this.currentEditingRow) {
+        // CHẾ ĐỘ CẬP NHẬT
+        // Lưu ý: UpdateWord nhận mảng data 14 cột
+        const dataToSave = [
+          this.currentEditingRow.id,
+          this.currentEditingRow.learnTime,
+          wordData.wordE,
+          wordData.pronunciation,
+          wordData.meaning,
+          wordData.definition,
+          this.currentEditingRow.learnCount,
+          wordData.audioUrl,
+          wordData.example,
+          this.currentEditingRow.isDeleted ? 'TRUE' : 'FALSE',
+          this.currentEditingRow.easinessFactor,
+          this.currentEditingRow.intervalDays,
+          this.currentEditingRow.repetitionStreak,
+          this.currentEditingRow.nextReviewDate
+        ];
+        await this.sheetsService.updateWord(this.currentEditingRow.row, dataToSave);
+      } else {
+        // CHẾ ĐỘ THÊM MỚI
+        await this.sheetsService.addWord(wordData);
+      }
 
-      await this.sheetsService.updateWord(this.currentEditingRow.row, dataToSave);
       this.closeModal();
       await this.loadData();
     } catch (err) {
-      console.error('Update failed:', err);
-      alert('Cập nhật thất bại. Vui lòng thử lại.');
+      console.error('Operation failed:', err);
+      alert('Thao tác thất bại. Vui lòng thử lại.');
     } finally {
       this.saving = false;
     }
