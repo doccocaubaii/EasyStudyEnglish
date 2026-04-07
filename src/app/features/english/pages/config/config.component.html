@@ -1,24 +1,119 @@
-<div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+<div class="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
 
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">Cấu hình</h1>
-            <p class="text-slate-500 text-sm">Cấu hình link sheet chứa từ vựng của bạn.</p>
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Cấu hình hệ thống</h1>
+            <p class="text-slate-500 text-sm mt-1">Quản lý người dùng và lưu trữ dữ liệu tại máy tính của bạn.</p>
         </div>
 
         <div class="flex items-center gap-3">
-            <button
-                class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all active:scale-95 shadow-sm shadow-blue-200">
-                <i class="fa-solid fa-save"></i>
+            <button (click)="checkServerVersion()" [disabled]="loading"
+                class="flex items-center gap-2.5 px-6 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-2xl transition-all active:scale-95 shadow-sm">
+                <i class="fa-solid fa-signal" [class.text-emerald-500]="serverStatus?.status === 'Connected'"></i>
+                Kiểm tra Kết nối
+            </button>
+            
+            <button (click)="saveSettings()" [disabled]="loading"
+                class="flex items-center gap-2.5 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold rounded-2xl transition-all active:scale-95 shadow-xl shadow-blue-200">
+                @if (loading) {
+                <i class="fa-solid fa-spinner animate-spin"></i>
+                } @else {
+                <i class="fa-solid fa-floppy-disk"></i>
+                }
                 Lưu cấu hình
             </button>
         </div>
     </div>
 
-    <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div class="p-6">
-            <p class="text-slate-400 italic">Dữ liệu sẽ hiển thị ở đây...</p>
-        </div>
-    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- User Selection & Creation Card -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden p-8 space-y-8">
+                
+                <!-- Section 1: Select User -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-user-gear text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-slate-800">Chọn người học tập</h2>
+                    </div>
 
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Danh sách Sheets</label>
+                        <div class="relative group">
+                            <select [(ngModel)]="selectedUser" [disabled]="loading"
+                                class="w-full pl-5 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all appearance-none cursor-pointer font-bold text-slate-700">
+                                <option value="">-- Chọn User --</option>
+                                @for (user of users; track user) {
+                                <option [value]="user">{{ user }}</option>
+                                }
+                            </select>
+                            <div class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h-px bg-slate-100"></div>
+
+                <!-- Section 2: Create User -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <i class="fa-solid fa-user-plus text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-slate-800">Tạo người dùng mới</h2>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">User_</span>
+                            <input [(ngModel)]="newUserName" placeholder="Ví dụ: MinhLuan"
+                                class="w-full pl-16 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all font-bold text-slate-700">
+                        </div>
+                        <button (click)="addNewUser()" [disabled]="loading || !newUserName"
+                            class="px-8 py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-bold rounded-2xl transition-all active:scale-95 whitespace-nowrap">
+                            Tạo Sheet
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400 flex items-center gap-2 px-1">
+                        <i class="fa-solid fa-circle-info"></i>
+                        Hệ thống sẽ tự động tạo Sheet mới với đầy đủ các cột tiêu đề chuẩn.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="space-y-6">
+            <div class="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
+                <div class="relative z-10 space-y-6">
+                    <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10">
+                        <i class="fa-solid fa-database text-xl text-blue-400"></i>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold tracking-tight">Cơ sở dữ liệu</h3>
+                    
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Các bản cache được lưu cục bộ để bạn có thể học tập ngay cả khi offline.
+                    </p>
+                    
+                    <div class="pt-4 flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full" [class.bg-emerald-500]="serverStatus?.status === 'Connected'" [class.bg-red-500]="serverStatus?.status === 'Disconnected'" [class.bg-slate-500]="!serverStatus" [class.animate-pulse]="serverStatus?.status === 'Connected'"></div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            {{ serverStatus ? (serverStatus.status + ' v' + serverStatus.version) : 'Chưa kiểm tra' }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Decorations -->
+                <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl"></div>
+            </div>
+        </div>
+
+    </div>
 </div>

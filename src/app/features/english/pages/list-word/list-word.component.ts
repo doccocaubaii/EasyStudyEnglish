@@ -112,6 +112,19 @@ export class ListWordComponent implements OnInit {
     this.enrichCurrentPage();
   }
 
+  async syncData() {
+    this.words = await this.sheetsService.syncWithSheet();
+    this.currentPage = 1;
+    this.enrichCurrentPage();
+  }
+
+  async deleteWord(word: WordModel) {
+    if (confirm(`Bạn có chắc muốn xóa từ "${word.wordE}"?`)) {
+      await this.sheetsService.deleteWord(word);
+      await this.loadData();
+    }
+  }
+
   async enrichCurrentPage() {
     const currentPageWords = this.paginatedWords;
     for (const word of currentPageWords) {
