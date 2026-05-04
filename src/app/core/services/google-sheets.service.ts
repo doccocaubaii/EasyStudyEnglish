@@ -44,11 +44,20 @@ export class GoogleSheetsService {
   currentSheet = signal('User_Default');
   cachedWords: WordModel[] = [];
 
+  private initPromise: Promise<void>;
+
   constructor(
     private http: HttpClient,
     private storage: StorageService
   ) {
-    this.loadSettings();
+    this.initPromise = this.loadSettings();
+  }
+
+  /**
+   * Đảm bảo Service đã load xong cài đặt (Sheet hiện tại)
+   */
+  async ensureInitialized() {
+    return this.initPromise;
   }
 
   async loadSettings() {
@@ -87,6 +96,9 @@ export class GoogleSheetsService {
    * Lấy danh sách từ vựng. Mặc định lấy từ File Cache ở local.
    */
   async getWords(forceRefresh: boolean = false): Promise<WordModel[]> {
+    // CHỜ LOAD XONG SETTINGS (Hết lỗi lệch sheet khi mới vào app)
+    await this.ensureInitialized();
+    
     const fileName = `cache_${this.currentSheet()}.json`;
 
     if (!forceRefresh) {

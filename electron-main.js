@@ -30,6 +30,27 @@ function createWindow() {
 const fs = require('fs');
 const { net } = require('electron'); // Import net để gọi API không bị CORS
 const storagePath = app.isPackaged ? path.dirname(process.execPath) : __dirname;
+const cachePath = path.join(storagePath, 'cache');
+
+// Tự động tạo thư mục cache nếu chưa có
+if (!fs.existsSync(cachePath)) {
+  fs.mkdirSync(cachePath, { recursive: true });
+}
+
+// Di chuyển các file cache cũ vào thư mục cache mới để làm sạch thư mục gốc
+try {
+  const files = fs.readdirSync(storagePath);
+  files.forEach(file => {
+    if (file.startsWith('cache_') && file.endsWith('.json')) {
+      const oldPath = path.join(storagePath, file);
+      const newPath = path.join(cachePath, file);
+      fs.renameSync(oldPath, newPath);
+      console.log(`--- [Electron] Migrated cache file: ${file} to /cache folder`);
+    }
+  });
+} catch (err) {
+  console.error('--- [Electron] Migration error:', err);
+}
 
 // Network IPC Handlers (Bypass CORS triệt để)
 ipcMain.handle('http-get', async (event, url) => {
@@ -51,13 +72,13 @@ ipcMain.handle('http-post', async (event, { url, body }) => {
 });
 
 ipcMain.handle('save-file', async (event, { fileName, data }) => {
-  const filePath = path.join(storagePath, fileName);
+  const filePath = path.join(cachePath, fileName);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   return true;
 });
 
 ipcMain.handle('read-file', async (event, fileName) => {
-  const filePath = path.join(storagePath, fileName);
+  const filePath = path.join(cachePath, fileName);
   if (fs.existsSync(filePath)) {
     const data = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(data);
