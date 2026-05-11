@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   httpGet: (url) => ipcRenderer.invoke('http-get', url),
-  httpPost: (url, body) => ipcRenderer.invoke('http-post', { url, body })
+  httpPost: (url, body) => ipcRenderer.invoke('http-post', { url, body }),
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url)
 });

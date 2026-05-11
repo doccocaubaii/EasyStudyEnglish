@@ -23,8 +23,8 @@ export class ListWordComponent implements OnInit {
 
   // Pagination state
   currentPage = 1;
-  pageSize = 50;
-  pageSizes = [10, 20, 30, 50, 100];
+  pageSize = 1000;
+  pageSizes = [20, 50, 100, 200, 500, 1000];
   jumpToPageInput: string = '';
   protected Math = Math; // Expose Math to template
 
@@ -111,8 +111,8 @@ export class ListWordComponent implements OnInit {
     await this.loadData();
   }
 
-  async loadData() {
-    this.words = await this.sheetsService.getWords();
+  async loadData(forceRefresh: boolean = false) {
+    this.words = await this.sheetsService.getWords(forceRefresh);
     this.enrichCurrentPage();
   }
 
@@ -129,54 +129,78 @@ export class ListWordComponent implements OnInit {
     }
   }
 
+  async cleanupBlankRows() {
+    if (confirm('Hệ thống sẽ quét và xóa vĩnh viễn các dòng trống trên Google Sheets. Bạn có chắc chắn muốn thực hiện?')) {
+      await this.sheetsService.cleanupBlankRows();
+      await this.loadData();
+      alert('Đã dọn dẹp xong các dòng trống!');
+    }
+  }
+
+  private failedWords = new Set<string>();
+
   async enrichCurrentPage() {
     const currentPageWords = this.paginatedWords;
     for (const word of currentPageWords) {
-      // Chỉ gọi API nếu các thông tin quan trọng bị thiếu
-      if (!word.pronunciation || !word.definition || !word.audioUrl) {
+      // Chỉ gọi API nếu các thông tin quan trọng bị thiếu và không phải là dấu "---" (đã tìm nhưng không thấy)
+      const shouldFetch = !word.pronunciation || !word.definition || !word.audioUrl;
+      const isAlreadyChecked = word.definition === '---' || word.pronunciation === '---';
+
+      if (shouldFetch && !isAlreadyChecked) {
         const data = await this.dictionaryService.getDefinition(word.wordE);
-        if (data) {
-          const firstMeaning = data.meanings[0];
-          
-          // 1. Cập nhật Model (để hiển thị UI)
-          const newPronunciation = word.pronunciation || data.phonetic || '';
-          const newDefinition = word.definition || firstMeaning?.definitions[0]?.definition || '';
-          const newAudioUrl = word.audioUrl || data.phonetics.find(p => p.audio)?.audio || '';
+        
+        // Dù có data hay không, chúng ta cũng sẽ chuẩn bị dữ liệu để update lên Sheet để "đánh dấu"
+        const newPronunciation = data?.phonetic || word.pronunciation || '---';
+        const newDefinition = data?.meanings[0]?.definitions[0]?.definition || word.definition || '---';
+        const newAudioUrl = data?.phonetics.find(p => p.audio)?.audio || word.audioUrl || '---';
 
-          // 2. Chỉ thực hiện UPDATE nếu có thông tin mới thực sự
-          if (newPronunciation !== word.pronunciation || 
-              newDefinition !== word.definition || 
-              newAudioUrl !== word.audioUrl) {
-            
-            word.pronunciation = newPronunciation;
-            word.definition = newDefinition;
-            word.audioUrl = newAudioUrl;
+        // Chỉ thực hiện UPDATE nếu có thông tin mới thực sự
+        if (newPronunciation !== word.pronunciation ||
+          newDefinition !== word.definition ||
+          newAudioUrl !== word.audioUrl) {
 
-            // 3. Tự động đẩy lên Sheet (Thứ tự 14 cột chuẩn)
-            const dataToSave = [
-              word.id,
-              word.learnTime || new Date().toLocaleString(),
-              word.wordE,
-              word.pronunciation,
-              word.meaning,
-              word.definition,
-              word.learnCount,
-              word.audioUrl,
-              word.example,
-              word.isDeleted ? 'TRUE' : 'FALSE',
-              word.easinessFactor,
-              word.intervalDays,
-              word.repetitionStreak,
-              word.nextReviewDate
-            ];
-            
-            // Gọi âm thầm, không cần await để tránh đứng UI
-            this.sheetsService.updateWord(word.row, dataToSave).catch(err => {
-              console.error(`Tự động đồng bộ từ "${word.wordE}" thất bại:`, err);
-            });
-          }
+          word.pronunciation = newPronunciation;
+          word.definition = newDefinition;
+          word.audioUrl = newAudioUrl;
+
+          const dataToSave = [
+            word.id,
+            word.learnTime || new Date().toLocaleString(),
+            word.wordE,
+            word.pronunciation,
+            word.meaning,
+            word.definition,
+            word.learnCount,
+            word.audioUrl,
+            word.example,
+            word.isDeleted ? 'TRUE' : 'FALSE',
+            word.easinessFactor,
+            word.intervalDays,
+            word.repetitionStreak,
+            word.nextReviewDate
+          ];
+
+          this.sheetsService.updateWord(word.row, dataToSave).catch(err => {
+            console.error(`Tự động đồng bộ từ "${word.wordE}" thất bại:`, err);
+          });
         }
       }
+    }
+  }
+
+  openDictionary(type: 'google' | 'oxford', word: string) {
+    const electronAPI = (window as any).electronAPI;
+    let url = '';
+    if (type === 'google') {
+      url = `https://translate.google.com/?sl=en&tl=vi&text=${encodeURIComponent(word)}&op=translate`;
+    } else {
+      url = `https://www.oxfordlearnersdictionaries.com/definition/english/${encodeURIComponent(word.toLowerCase())}`;
+    }
+
+    if (electronAPI) {
+      electronAPI.openExternalUrl(url);
+    } else {
+      window.open(url, '_blank');
     }
   }
 
@@ -211,6 +235,45 @@ export class ListWordComponent implements OnInit {
       example: word.example
     });
     this.showEditModal = true;
+  }
+
+  async updateMemorizationLevel(word: WordModel, level: number) {
+    // 0: Red, 1: Orange, 2: Yellow, 3: Blue, 4: Green
+    let streak = 0;
+    let interval = 0;
+    let ef = 2.5;
+
+    switch (level) {
+      case 0: streak = 0; interval = 0; break;
+      case 1: streak = 1; interval = 1; break;
+      case 2: streak = 2; interval = 6; break;
+      case 3: streak = 4; interval = 15; break;
+      case 4: streak = 8; interval = 45; break;
+    }
+
+    const today = new Date();
+    const nextDate = new Date(today);
+    nextDate.setDate(today.getDate() + interval);
+
+    const dataToSave = [
+      word.id,
+      word.learnTime || new Date().toLocaleString(),
+      word.wordE,
+      word.pronunciation,
+      word.meaning,
+      word.definition,
+      level > 0 ? (word.learnCount || 1) : 0,
+      word.audioUrl,
+      word.example,
+      word.isDeleted ? 'TRUE' : 'FALSE',
+      ef,
+      interval,
+      streak,
+      nextDate.toISOString().split('T')[0]
+    ];
+
+    await this.sheetsService.updateWord(word.row, dataToSave);
+    await this.loadData();
   }
 
   closeModal() {

@@ -7,7 +7,12 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <button (click)="loadData()" [disabled]="sheetsService.loading()"
+      <button (click)="cleanupBlankRows()" [disabled]="sheetsService.loading()"
+        class="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium rounded-xl transition-all border border-rose-100">
+        <i class="fa-solid fa-broom" [class.animate-bounce]="sheetsService.loading()"></i>
+        Dọn dẹp dòng trống
+      </button>
+      <button (click)="loadData(true)" [disabled]="sheetsService.loading()"
         class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all">
         <i class="fa-solid fa-rotate" [class.animate-spin]="sheetsService.loading()"></i>
         Làm mới
@@ -41,6 +46,7 @@
             <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Từ vựng (Eng)</th>
             <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Nghĩa tiếng Việt</th>
             <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider">Ghi chú</th>
+            <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mức độ</th>
             <th class="p-5 text-xs font-bold text-slate-400 uppercase tracking-wider text-center w-24">Sửa</th>
           </tr>
         </thead>
@@ -49,17 +55,35 @@
           <tr class="hover:bg-slate-50/50 transition-colors group">
             <td class="p-5 text-center text-slate-400 font-mono text-xs">#{{ word.row }}</td>
             <td class="p-5 align-top">
-              <div class="flex items-center gap-2 group/word">
+              <div class="flex items-center gap-2 group/word p-2 rounded-lg">
+                <!-- Dot mức độ thuộc bài -->
+                <div [style.backgroundColor]="sheetsService.getMemorizationColor(word)" 
+                  class="w-3 h-3 rounded-full shadow-sm ring-4 ring-white shrink-0"
+                  [title]="'Chuỗi nhớ: ' + word.repetitionStreak"></div>
+
                 <span
                   class="text-slate-800 font-bold group-hover/word:text-blue-600 transition-colors uppercase tracking-tight">{{
                   word.wordE }}</span>
 
-                @if (word.audioUrl || word.dictionaryData?.audioUrl) {
-                <button (click)="playAudio(word.audioUrl || word.dictionaryData?.audioUrl)"
-                  class="w-7 h-7 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all active:scale-90 shadow-sm shadow-blue-100">
+                @if (word.audioUrl && word.audioUrl !== '---') {
+                <button (click)="playAudio(word.audioUrl)"
+                  class="w-7 h-7 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all active:scale-90 shadow-sm shadow-blue-100"
+                  title="Nghe phát âm">
                   <i class="fa-solid fa-headphones-simple text-[10px]"></i>
                 </button>
                 }
+
+                <button (click)="openDictionary('google', word.wordE)"
+                  class="w-7 h-7 flex items-center justify-center rounded-full bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all active:scale-90 shadow-sm shadow-orange-100"
+                  title="Google Dịch">
+                  <span class="text-[10px] font-black">G</span>
+                </button>
+
+                <button (click)="openDictionary('oxford', word.wordE)"
+                  class="w-7 h-7 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all active:scale-90 shadow-sm shadow-indigo-100"
+                  title="Từ điển Oxford">
+                  <span class="text-[10px] font-black">O</span>
+                </button>
               </div>
 
               <div class="flex items-center gap-1.5 mt-1">
@@ -87,6 +111,25 @@
               }
             </td>
             <td class="p-5 text-sm text-slate-400 italic max-w-xs truncate">{{ word.example || '---' }}</td>
+            <td class="p-5">
+              <div class="flex items-center justify-center gap-1.5">
+                <button (click)="updateMemorizationLevel(word, 0)" title="Chưa học / Quên"
+                  class="w-3 h-3 rounded-full bg-red-500 hover:scale-150 transition-transform shadow-sm"
+                  [class.ring-2]="sheetsService.getMemorizationClass(word) === 'bg-red-500'" [class.ring-slate-300]="sheetsService.getMemorizationClass(word) === 'bg-red-500'"></button>
+                <button (click)="updateMemorizationLevel(word, 1)" title="Yếu"
+                  class="w-3 h-3 rounded-full bg-orange-500 hover:scale-150 transition-transform shadow-sm"
+                  [class.ring-2]="sheetsService.getMemorizationClass(word) === 'bg-orange-500'" [class.ring-slate-300]="sheetsService.getMemorizationClass(word) === 'bg-orange-500'"></button>
+                <button (click)="updateMemorizationLevel(word, 2)" title="Trung bình"
+                  class="w-3 h-3 rounded-full bg-yellow-500 hover:scale-150 transition-transform shadow-sm"
+                  [class.ring-2]="sheetsService.getMemorizationClass(word) === 'bg-yellow-500'" [class.ring-slate-300]="sheetsService.getMemorizationClass(word) === 'bg-yellow-500'"></button>
+                <button (click)="updateMemorizationLevel(word, 3)" title="Khá"
+                  class="w-3 h-3 rounded-full bg-blue-500 hover:scale-150 transition-transform shadow-sm"
+                  [class.ring-2]="sheetsService.getMemorizationClass(word) === 'bg-blue-500'" [class.ring-slate-300]="sheetsService.getMemorizationClass(word) === 'bg-blue-500'"></button>
+                <button (click)="updateMemorizationLevel(word, 4)" title="Tốt"
+                  class="w-3 h-3 rounded-full bg-emerald-500 hover:scale-150 transition-transform shadow-sm"
+                  [class.ring-2]="sheetsService.getMemorizationClass(word) === 'bg-emerald-500'" [class.ring-slate-300]="sheetsService.getMemorizationClass(word) === 'bg-emerald-500'"></button>
+              </div>
+            </td>
             <td class="p-5 text-center">
               <div class="flex items-center justify-center gap-1">
                 <button (click)="openEditModal(word)"

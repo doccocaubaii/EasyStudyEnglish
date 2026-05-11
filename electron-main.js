@@ -71,6 +71,12 @@ ipcMain.handle('http-post', async (event, { url, body }) => {
   return await response.text();
 });
 
+ipcMain.handle('open-external-url', async (event, url) => {
+  const { shell } = require('electron');
+  await shell.openExternal(url);
+  return true;
+});
+
 ipcMain.handle('save-file', async (event, { fileName, data }) => {
   const filePath = path.join(cachePath, fileName);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));

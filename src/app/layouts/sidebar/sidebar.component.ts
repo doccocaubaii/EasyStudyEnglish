@@ -13,18 +13,18 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 export class SidebarComponent {
   menuItems = [
     {
-      title: 'Home',
-      icon: 'home',
-      link: '/'
-    },
-    {
-      title: 'List Word',
-      icon: 'list',
+      title: 'Danh sách từ',
+      icon: 'fa-solid fa-list-ul',
       link: '/list-word'
     },
     {
-      title: 'Config',
-      icon: 'config',
+      title: 'Học tập',
+      icon: 'fa-solid fa-graduation-cap',
+      link: '/study'
+    },
+    {
+      title: 'Cài đặt',
+      icon: 'fa-solid fa-gears',
       link: '/config'
     }
   ]
